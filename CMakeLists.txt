@@ -3,7 +3,10 @@ project(cpp_euler_graph)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(cpp_euler_graph main.cpp src/graph.cpp src/graph.h src/vertex.h src/cm_graph.cpp src/cm_graph.h)
+add_executable(cpp_euler_graph main.cpp)
+
+add_subdirectory(libgraph)
+target_link_libraries(cpp_euler_graph libgraph)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
