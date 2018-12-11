@@ -1,20 +1,28 @@
-#include "src/cm_graph.h"
+#include "libgraph/include/graph.h"
 
 #include <iostream>
 
 int main() {
-    cm_graph testy;
 
-    for(auto iter = 0; iter < 5; ++iter)
-        testy.add_node();
+    std::string const simple_path = "../sample/simple_test.txt";
+    std::string const euler_path = "../sample/euler_path_test.txt";
+    std::string const euler_cycle = "../sample/euler_cycle_test.txt";
+    std::string const non_euler = "../sample/non_euler_test.txt";
 
-    testy.add_edge(1, 2);
-    testy.add_edge(1, 3);
-    testy.add_edge(4, 1);
-    testy.add_edge(2, 3, 15);
+    graph graphy;
 
-    testy.write_to_console();
+    //graphy.read_from_console();
+    graphy.read_from_file(euler_cycle);
 
-    std::cout << testy.is_euler() << std::endl;
+    graphy.print_to_console();
+
+    auto result = graphy.get_euler_path();
+
+    std::cout << "Euler path: ";
+    for (auto const & node : result) {
+        std::cout << node << " ";
+    }
+    std::cout << std::endl;
+
     return 0;
 }
