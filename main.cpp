@@ -1,6 +1,6 @@
-#include "libgraph/include/graph.h"
-
 #include <iostream>
+
+#include "libgraph/include/graph.h"
 
 int main() {
 

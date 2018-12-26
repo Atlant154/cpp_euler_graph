@@ -1,35 +1,41 @@
 #include <iostream>
+#include <algorithm>
 #include <fstream>
 #include <stack>
 
 #include "../include/graph.h"
 
-void graph::read_from_file(std::string const &input_file_path, std::string const &delimiter)
+void graph::read_from_file(std::string const & input_file_path, std::string const & delimiter)
 {
     node_counter_ = 0;
     graph_.clear();
 
     std::ifstream input_file;
     input_file.open(input_file_path);
-    if (!input_file.is_open())
+    if ( !input_file.is_open() )
         return;
 
-    int node_number;
+    uint32_t node_number;
     std::string buffer;
     size_t position = 0;
 
-    while (!std::getline(input_file, buffer).eof()) {
-        node_number = 1;
+    while ( !std::getline(input_file, buffer).eof() )
+    {
+        node_number = 0;
         add_node();
-        while (std::string::npos != (position = buffer.find(delimiter))) {
-            if (std::stoi(buffer.substr(0, position)))
-                graph_[node_counter_].emplace(node_number);
 
-            buffer.erase(0, position + delimiter.length());
+        while ( std::string::npos != ( position = buffer.find( delimiter ) ) )
+        {
+            auto value = static_cast< uint32_t >( std::stoi( buffer.substr( 0, position ) ) );
+            if ( value )
+                graph_[node_counter_ - 1].emplace( vertex( node_number, value ) );
+
+            buffer.erase( 0, position + delimiter.length() );
             ++node_number;
         }
-        if (std::stoi(buffer))
-            graph_[node_counter_].emplace(node_number);
+        auto value = static_cast< uint32_t >( std::stoi( buffer ) );
+        if ( value )
+            graph_[node_counter_ - 1].emplace( vertex( node_number, value ) );
     }
     input_file.close();
 }
@@ -39,20 +45,21 @@ void graph::read_from_console()
     node_counter_ = 0;
     graph_.clear();
 
-    int size;
+    uint32_t size;
     std::cout << "Enter graph size: ";
     std::cin >> size;
 
-    for(int iter = 0; iter < size; ++iter)
+    for( uint32_t iter = 0; iter < size; ++iter )
     {
         add_node();
         std::cout << "Node num: " << node_counter_ << "." << std::endl;
-        for(int adjacent_iter = 0; adjacent_iter < size; ++adjacent_iter)
+
+        for( uint32_t adjacent_iter = 0; adjacent_iter < size; ++adjacent_iter )
         {
-            int buffer;
+            uint32_t buffer;
             std::cin >> buffer;
-            if(buffer > 0)
-                add_edge(node_counter_, adjacent_iter + 1);
+            if( buffer > 0 )
+                add_edge(node_counter_, adjacent_iter, buffer );
         }
     }
 }
@@ -63,103 +70,105 @@ void graph::write_matrix_to_file(std::string const &output_dir) const
     std::string const filename = "/adjacent_matrix.txt";
     output_file.open(output_dir + filename, std::ios::out | std::ios::trunc);
 
-    for (int node_iter = 1; node_iter <= (int)graph_.size(); ++node_iter) {
-        for (int adjacement_iter = 1; adjacement_iter <= (int)graph_.size(); ++adjacement_iter) {
-            if (graph_.at(node_iter).find(adjacement_iter) == graph_.at(node_iter).end())
+    for ( const auto & vertex : graph_ )
+    {
+        for( uint32_t node_iter = 0; node_iter < graph_.size(); ++node_iter )
+        {
+            if( vertex.second.find( { node_iter, 1 } ) == vertex.second.end() )
                 output_file << "0 ";
             else
                 output_file << "1 ";
         }
-        output_file << std::endl;
+        output_file << '\n';
     }
-
     output_file.close();
 }
 
 void graph::print_to_console() const
 {
-    for (const auto &node : graph_) {
+    for ( auto const & node : graph_)
+    {
         std::cout << "Node: " << node.first << ". Adjacent nodes: ";
-        for (const auto &adj_node : node.second) {
-            std::cout << adj_node << " ";
-        }
-        std::cout << std::endl;
+        std::cout << node.second << std::endl;
     }
 }
 
 void graph::add_node()
 {
+    graph_.try_emplace( node_counter_, std::set< vertex >() );
     ++node_counter_;
-    graph_.try_emplace(node_counter_, std::set<int>());
 }
 
-void graph::add_edge(int departure, int destination)
+void graph::add_edge( uint32_t departure, uint32_t destination, uint32_t const distance = 1 )
 {
-    std::cout << "Dep: " << departure << ". Dest: " << destination << "." << std::endl;
-    graph_[departure].emplace(destination);
-    graph_[destination].emplace(departure);
+    graph_[departure].emplace( destination, distance );
+    graph_[destination].emplace( departure, distance );
 }
 
-void graph::remove_edge(int departure, int destination)
+void graph::add_direct_edge( uint32_t const departure, uint32_t const destination, uint32_t const distance = 1 )
 {
-    graph_[departure].erase(destination);
-    graph_[destination].erase(departure);
+    graph_[departure].emplace( destination, distance );
 }
 
-bool graph::is_edge(int departure, int destination) const
+void graph::remove_edge( uint32_t departure, uint32_t destination )
 {
-    return !(graph_.at(departure).find(destination) == graph_.at(departure).end());
+    graph_.at( departure ).erase( { destination, 1 } );
+    graph_.at( destination ).erase( { departure, 1 } );
 }
 
-void graph::deep_first_search(std::vector<bool> &visited, int current) const
+bool graph::is_edge( uint32_t departure, uint32_t destination) const
 {
-    if(visited.at(current) == true)
-        return;
+    return !( graph_.at( departure ).find( {destination, 1} ) == graph_.at( destination ).end() );
+}
 
-    visited.at(current) = true;
-    for (auto const & node : graph_) {
-        if(visited.at(node.first) == false && !node.second.empty())
-            deep_first_search(visited, node.first);
-    }
+void graph::deep_first_search( std::vector< bool > & visited, uint32_t current ) const
+{
+    visited.at( current ) = true;
+
+    for( auto const & vertex : graph_.at( current ) )
+        if( visited.at( vertex.vertex_id_ ) == false )
+            deep_first_search( visited, vertex.vertex_id_ );
 }
 
 bool graph::is_euler() const
 {
-    std::vector<bool> visited(graph_.size() + 1, false);
+    std::vector<bool> visited( graph_.size(), false );
     size_t special_nodes_counter = 0;
 
-    for (auto const & node : graph_)
-        if(node.second.size() % 2 == 1)
+    for ( auto const & node : graph_ )
+        if( node.second.size() % 2 == 1 )
             ++special_nodes_counter;
-    if (special_nodes_counter > 2)
+    if ( special_nodes_counter > 2 )
         return false;
 
 
-    for (auto const & node : graph_)
-        if (node.second.size() > 0) {
-            deep_first_search(visited, node.first);
+    for ( auto const & node : graph_ )
+        if ( !node.second.empty() )
+        {
+            deep_first_search( visited, node.first );
             break;
         }
 
-    for (auto const & node : graph_) {
-        if( node.second.size() > 0 && visited.at(node.first) == false )
+    for ( auto const & node : graph_ )
+    {
+        if( !node.second.empty() && visited.at( node.first ) == false )
             return false;
     }
 
     return true;
 }
 
-std::vector<int> graph::get_euler_path() const
+std::vector< uint32_t > graph::get_euler_path() const
 {
-    std::vector<int> result;
+    std::vector< uint32_t > result;
 
-    if (!is_euler()) {
+    if ( !is_euler() ) {
         std::cout << "No Euler path!" << std::endl;
         return result;
     }
 
     auto tested_graph = graph_;
-    std::stack<int> stack;
+    std::stack< uint32_t > stack;
 
     for (const auto &node : tested_graph) {
         if (node.second.size() % 2 == 1) {
@@ -168,26 +177,29 @@ std::vector<int> graph::get_euler_path() const
         }
     }
 
-    if (stack.empty())
+    if ( stack.empty() )
         stack.emplace(1);
 
-    while (!stack.empty()) {
+    while ( stack.size() < graph_.size() && !stack.empty() )
+    {
         auto w = stack.top();
         for (auto const & node : tested_graph) {
-            if (node.second.find(w) != node.second.end()) {
+            if ( node.second.find( { w, 1} ) != node.second.end() )
+            {
                 stack.push(node.first);
-                tested_graph.at(node.first).erase(w);
-                tested_graph.at(w).erase(node.first);
+                tested_graph.at( node.first ).erase( { w, 1} );
+                tested_graph.at( w ).erase( { node.first, 1} );
                 break;
             }
         }
         if (w == stack.top())
             stack.pop();
-        if (stack.size() == graph_.size() + 1)
-            while (!stack.empty()) {
-                result.emplace_back(stack.top());
-                stack.pop();
-            }
+    }
+
+    while ( !stack.empty() )
+    {
+        result.emplace_back(stack.top());
+        stack.pop();
     }
 
     return result;
